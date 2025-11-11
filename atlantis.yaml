@@ -37,5 +37,5 @@ workflows:
             extra_args: [-var-file=secrets.tfvars]
     apply:
       steps:
-        - apply:
+        - apply: 
             extra_args: [-var-file=secrets.tfvars]
