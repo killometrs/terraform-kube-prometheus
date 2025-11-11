@@ -1,0 +1,10 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+backend.conf
+secrets.tfvars
+
+# Kubernetes
+*.kubeconfig

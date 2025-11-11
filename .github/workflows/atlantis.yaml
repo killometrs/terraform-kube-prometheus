@@ -1,0 +1,90 @@
+name: Atlantis Auto Deploy - Yandex Cloud
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
+
+      - name: Create backend.conf
+        run: |
+          cat > prod/backend.conf << EOF
+          bucket                      = "${{ secrets.YC_S3_BUCKET }}"
+          key                         = "${{ secrets.YC_S3_STATE_KEY }}"
+          region                      = "ru-central1"
+          endpoint                    = "storage.yandexcloud.net"
+          skip_region_validation      = true
+          skip_credentials_validation = true
+          skip_requesting_account_id  = true
+          skip_s3_checksum            = true
+          EOF
+
+      - name: Create secrets.tfvars
+        run: |
+          cat > prod/secrets.tfvars << EOF
+          yandex_cloud_id = "${{ secrets.YC_CLOUD_ID }}"
+          yandex_folder_id = "${{ secrets.YC_FOLDER_ID }}"
+          grafana_admin_password = "${{ secrets.GRAFANA_ADMIN_PASSWORD }}"
+          EOF
+
+      - name: Terraform Init
+        run: |
+          cd prod
+          terraform init -backend-config=backend.conf
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.YC_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_SECRET_KEY }}
+
+      - name: Terraform Plan
+        if: github.event_name == 'pull_request'
+        run: |
+          cd prod
+          terraform plan -var-file=secrets.tfvars
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.YC_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_SECRET_KEY }}
+          YC_TOKEN: ${{ secrets.YC_TOKEN }}
+          TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+
+      - name: Terraform Apply
+        if: github.event_name == 'push'
+        run: |
+          cd prod
+          terraform apply -auto-approve -var-file=secrets.tfvars
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.YC_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_SECRET_KEY }}
+          YC_TOKEN: ${{ secrets.YC_TOKEN }}
+          TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+
+  manifests:
+    runs-on: ubuntu-latest
+    needs: terraform
+    if: github.event_name == 'push'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Kubernetes
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_DATA }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Make script executable
+        run: chmod +x scripts/apply-manifests.sh
+
+      - name: Apply additional manifests
+        run: ./scripts/apply-manifests.sh

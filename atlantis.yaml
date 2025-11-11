@@ -1,0 +1,41 @@
+version: 3
+automerge: true
+
+projects:
+  - name: kube-prometheus-prod
+    dir: prod
+    workspace: default
+    terraform_version: v1.5.7
+    autoplan:
+      when_modified: ["../modules/**/*.tf", "*.tf", "*.tfvars"]
+      enabled: true
+    apply_requirements: [approved, mergeable]
+    
+    environment:
+      # Yandex Cloud
+      YC_TOKEN: $YC_TOKEN
+      YC_CLOUD_ID: $YC_CLOUD_ID
+      YC_FOLDER_ID: $YC_FOLDER_ID
+      
+      # S3 бэкенд
+      AWS_ACCESS_KEY_ID: $YC_ACCESS_KEY
+      AWS_SECRET_ACCESS_KEY: $YC_SECRET_KEY
+      
+      # Kubernetes
+      KUBE_CONFIG_DATA: $KUBE_CONFIG_DATA
+      
+      # Grafana
+      GRAFANA_ADMIN_PASSWORD: $GRAFANA_ADMIN_PASSWORD
+
+workflows:
+  terraform:
+    plan:
+      steps:
+        - init:
+            extra_args: [-backend-config=backend.conf]
+        - plan:
+            extra_args: [-var-file=secrets.tfvars]
+    apply:
+      steps:
+        - apply:
+            extra_args: [-var-file=secrets.tfvars]
