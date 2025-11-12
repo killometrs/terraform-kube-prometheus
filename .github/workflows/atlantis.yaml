@@ -62,6 +62,18 @@ jobs:
           YC_TOKEN: ${{ secrets.YC_TOKEN }}
           TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
 
+      - name: Cleanup stuck Helm release
+        if: github.event_name == 'push'
+        run: |
+          echo "=== Cleaning up stuck Helm release ==="
+          # Принудительно удаляем релиз в любом состоянии
+          helm uninstall kube-prometheus-stack -n monitoring --ignore-not-found || true
+          # Ждем завершения удаления
+          sleep 10
+          # Проверяем что релиза нет
+          helm list -n monitoring
+          echo "=== Cleanup complete ==="
+
       - name: Terraform Apply
         if: github.event_name == 'push'
         run: |
