@@ -72,7 +72,18 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_SECRET_KEY }}
           YC_TOKEN: ${{ secrets.YC_TOKEN }}
           TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
-
+          
+      - name: Verify kube-prometheus-stack installation
+        if: github.event_name == 'push'
+        run: |
+          echo "=== Helm status ==="
+          helm status kube-prometheus-stack -n monitoring
+          echo "=== All pods ==="
+          kubectl get pods -n monitoring
+          echo "=== Services ==="
+          kubectl get svc -n monitoring
+          echo "=== Persistent volumes ==="
+          kubectl get pvc -n monitoring
   manifests:
     runs-on: ubuntu-latest
     needs: terraform
