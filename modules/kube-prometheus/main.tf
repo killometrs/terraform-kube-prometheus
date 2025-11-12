@@ -18,6 +18,10 @@ terraform {
       source  = "gavinbunney/kubectl"
       version = "~> 1.14"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.9"
+    }
   }
 }
 
@@ -53,8 +57,24 @@ resource "kubernetes_secret" "grafana_admin" {
   depends_on = [kubernetes_namespace.monitoring]
 }
 
+
+# --- ДОБАВЛЕННЫЙ РЕСУРС: Установка ServiceMonitor CRD ---
+resource "kubectl_manifest" "prometheus_self_monitor_crd" {
+  yaml_body = file("${path.module}/crd-servicemonitors.yaml")
+}
+
+# --- ДОБАВЛЕННЫЙ РЕСУРС: Задержка для применения CRD ---
+resource "time_sleep" "wait_for_crd" {
+  depends_on = [kubectl_manifest.prometheus_self_monitor_crd]
+  # Ждем 5 секунд, этого обычно достаточно
+  create_duration = "5s" 
+}
+
+
 # Установка kube-prometheus stack
 resource "helm_release" "kube_prometheus_stack" {
+  
+
   name       = "kube-prometheus-stack"
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"
@@ -89,7 +109,8 @@ resource "helm_release" "kube_prometheus_stack" {
   depends_on = [
     kubernetes_namespace.monitoring,
     kubernetes_secret.grafana_admin,
-    kubectl_manifest.prometheus_self_monitor_crd
+    kubectl_manifest.prometheus_self_monitor_crd,
+    time_sleep.wait_for_crd
   ]
 
   lifecycle {
@@ -160,7 +181,10 @@ resource "kubernetes_manifest" "prometheus_self_monitor" {
       }]
     }
   }
-
+  depends_on = [
+    helm_release.kube_prometheus_stack,
+    time_sleep.wait_for_crd
+  ]
 }
 
 # Ingress для Grafana
