@@ -44,6 +44,7 @@ resource "helm_release" "kube_prometheus_stack" {
       enable_thanos          = var.enable_thanos
       resource_limits        = var.resource_limits
     })
+    yamlencode(var.values)
   ]
   
   dynamic "value" {

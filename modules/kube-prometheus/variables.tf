@@ -80,12 +80,6 @@ variable "values" { # <-- ДОБАВЬТЕ ЭТУ ПЕРЕМЕННУЮ
 }
 
 
-# Node selector и tolerations
-variable "node_selector" {
-  type        = any  
-  description = "Node selector for monitoring components"
-  default     = {}
-}
 
 variable "tolerations" {
   type = list(object({
