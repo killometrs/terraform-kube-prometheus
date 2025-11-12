@@ -24,12 +24,33 @@ module "kube_prometheus" {
   enable_thanos       = var.enable_thanos
   
   # Дополнительные values для Helm
-  extra_values = merge(var.extra_values, {
-    "grafana.service.type"                    = "LoadBalancer"
-    "grafana.service.annotations"             = var.load_balancer_annotations
-    "prometheus.service.type"                 = "LoadBalancer"
-    "prometheus.service.annotations"          = var.load_balancer_annotations
-    "alertmanager.service.type"               = "LoadBalancer"
-    "alertmanager.service.annotations"        = var.load_balancer_annotations
-  })
+#  extra_values = merge(var.extra_values, {
+#    "grafana.service.type"                    = "LoadBalancer"
+#    "grafana.service.annotations"             = var.load_balancer_annotations
+#    "prometheus.service.type"                 = "LoadBalancer"
+#    "prometheus.service.annotations"          = var.load_balancer_annotations
+#    "alertmanager.service.type"               = "LoadBalancer"
+#    "alertmanager.service.annotations"        = var.load_balancer_annotations
+#  })
+
+  values = {
+    grafana = {
+      service = {
+        type        = "LoadBalancer"
+        annotations = var.load_balancer_annotations
+      }
+    }
+    prometheus = {
+      service = {
+        type        = "LoadBalancer"
+        annotations = var.load_balancer_annotations
+      }
+    }
+    alertmanager = {
+      service = {
+        type        = "LoadBalancer"
+        annotations = var.load_balancer_annotations
+      }
+    }
+  }
 }

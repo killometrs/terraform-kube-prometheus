@@ -46,21 +46,13 @@ resource "helm_release" "kube_prometheus_stack" {
     })
   ]
   
-  dynamic "set" {
-    for_each = var.extra_values
+  dynamic "value" {
+    for_each = var.values != null ? [var.values] : []
     content {
-      name  = set.key
-      value = set.value
+      # ВАЖНО: убедитесь, что ваш файл values.yaml.tpl не конфликтует
+      value = value.value
     }
-  }
-  
-  dynamic "set" {
-    for_each = var.node_selector
-    content {
-      name  = "nodeSelector.${set.key}"
-      value = set.value
-    }
-  }
+  }  
 
   set {
     name  = "grafana.admin.existingSecret"

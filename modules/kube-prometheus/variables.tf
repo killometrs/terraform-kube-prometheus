@@ -73,15 +73,16 @@ variable "network_policy_enabled" {
 }
 
 # Дополнительные настройки Helm
-variable "extra_values" {
-  type        = map(any)
-  description = "Extra values to pass to Helm chart"
+variable "values" { # <-- ДОБАВЬТЕ ЭТУ ПЕРЕМЕННУЮ
+  description = "Additional structured values for the Helm chart"
+  type        = any # Используем any, так как это сложный объект
   default     = {}
 }
 
+
 # Node selector и tolerations
 variable "node_selector" {
-  type        = map(string)
+  type        = any  
   description = "Node selector for monitoring components"
   default     = {}
 }
