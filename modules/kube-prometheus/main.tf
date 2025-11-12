@@ -37,10 +37,6 @@ resource "kubernetes_namespace" "monitoring" {
   }
 }
 
-resource "kubectl_manifest" "prometheus_self_monitor_crd" {
-  # Применяем CRD из локального файла перед установкой Helm-чарта
-  yaml_body = file("${path.module}/crd-servicemonitors.yaml")
-}
 
 # Создание секрета для Grafana
 resource "kubernetes_secret" "grafana_admin" {
