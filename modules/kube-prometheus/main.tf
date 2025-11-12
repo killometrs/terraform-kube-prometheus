@@ -55,8 +55,12 @@ resource "kubernetes_secret" "grafana_admin" {
 
 
 # --- ДОБАВЛЕННЫЙ РЕСУРС: Установка ServiceMonitor CRD ---
+#resource "kubectl_manifest" "prometheus_self_monitor_crd" {
+#  yaml_body = file("${path.module}/crd-servicemonitors.yaml")
+#}
+
 resource "kubectl_manifest" "prometheus_self_monitor_crd" {
-  yaml_body = file("${path.module}/crd-servicemonitors.yaml")
+  yaml_body = fileexists("${path.module}/crd/servicemonitors.yaml") ? file("${path.module}/crd/servicemonitors.yaml") : "apiVersion: apiextensions.k8s.io/v1\nkind: CustomResourceDefinition\nmetadata:\n  name: servicemonitors.monitoring.coreos.com\nspec:\n  group: monitoring.coreos.com\n  names:\n    kind: ServiceMonitor\n    plural: servicemonitors\n  scope: Namespaced\n  versions:\n  - name: v1\n    served: true\n    storage: true"
 }
 
 # --- ДОБАВЛЕННЫЙ РЕСУРС: Задержка для применения CRD ---
