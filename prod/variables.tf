@@ -23,10 +23,10 @@ variable "cluster_name" {
   default = "production-k8s"
 }
 
-variable "kube_config_path" {
-  type    = string
-  default = "~/.kube/config"
-}
+#variable "kube_config_path" {
+#  type    = string
+#  default = "~/.kube/config"
+#}
 
 # Версии
 variable "prometheus_stack_version" {
