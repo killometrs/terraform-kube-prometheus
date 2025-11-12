@@ -74,6 +74,13 @@ jobs:
           helm list -n monitoring
           echo "=== Cleanup complete ==="
 
+      - name: Cleanup duplicate Network Policies
+        if: github.event_name == 'push'
+        run: |
+          echo "=== Cleaning up duplicate Network Policies ==="
+          kubectl delete networkpolicies grafana -n monitoring --ignore-not-found || true
+          echo "=== Cleanup complete ==="
+
       - name: Terraform Apply
         if: github.event_name == 'push'
         run: |
