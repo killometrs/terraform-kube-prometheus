@@ -75,6 +75,7 @@ resource "helm_release" "kube_prometheus_stack" {
   disable_webhooks = true
   force_update    = true
   cleanup_on_fail = true
+  replace         = true
 
   values = [
     templatefile("${path.module}/values.yaml.tpl", {
