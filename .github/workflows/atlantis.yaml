@@ -65,17 +65,6 @@ jobs:
           TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
           #KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
 
-      - name: Debug Kubeconfig setup
-        run: |
-          echo "KUBE_CONFIG_DATA exists in env var? : ${KUBE_CONFIG_DATA:?True:False}"
-          # Попробуйте создать файл вручную в job terraform
-          mkdir -p ~/.kube
-          echo "${KUBE_CONFIG_DATA}" > ~/.kube/config
-          chmod 600 ~/.kube/config
-          echo "Kubeconfig file created at ~/.kube/config"
-        env:
-          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
-
       - name: Terraform Apply
         if: github.event_name == 'push'
         run: |
