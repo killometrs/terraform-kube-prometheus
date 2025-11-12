@@ -156,7 +156,6 @@ resource "kubernetes_manifest" "prometheus_self_monitor" {
     }
   }
 
-  depends_on = [helm_release.kube_prometheus_stack]
 }
 
 # Ingress для Grafana
