@@ -23,7 +23,6 @@ variable "cluster_name" {
   default = "production-k8s"
 }
 
-
 # Версии
 variable "prometheus_stack_version" {
   type    = string
