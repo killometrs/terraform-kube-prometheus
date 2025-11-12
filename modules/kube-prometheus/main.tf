@@ -71,7 +71,11 @@ resource "helm_release" "kube_prometheus_stack" {
   namespace  = kubernetes_namespace.monitoring.metadata[0].name
   timeout    = 600
   wait       = true
-  
+ 
+  disable_webhooks = true
+  force_update    = true
+  cleanup_on_fail = true
+
   values = [
     templatefile("${path.module}/values.yaml.tpl", {
       grafana_admin_password = var.grafana_admin_password
