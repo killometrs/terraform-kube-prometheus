@@ -44,16 +44,9 @@ resource "helm_release" "kube_prometheus_stack" {
       enable_thanos          = var.enable_thanos
       resource_limits        = var.resource_limits
     })
-    yamlencode(var.values)
+    ,yamlencode(var.values)
   ]
   
-  dynamic "value" {
-    for_each = var.values != null ? [var.values] : []
-    content {
-      # ВАЖНО: убедитесь, что ваш файл values.yaml.tpl не конфликтует
-      value = value.value
-    }
-  }  
 
   set {
     name  = "grafana.admin.existingSecret"
