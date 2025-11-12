@@ -1,3 +1,26 @@
+terraform {
+  # Добавьте этот блок в начало файла modules/kube-prometheus/main.tf
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.23"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.11"
+    }
+    yandex = {
+      source  = "yandex-cloud/yandex"
+      version = "~> 0.95"
+    }
+    # Укажите, что модуль тоже использует gavinbunney/kubectl
+    kubectl = {
+      source  = "gavinbunney/kubectl"
+      version = "~> 1.14"
+    }
+  }
+}
+
 # Создание namespace для мониторинга
 resource "kubernetes_namespace" "monitoring" {
   metadata {
