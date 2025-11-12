@@ -17,7 +17,7 @@ variable "environment" {
 variable "prometheus_stack_version" {
   type        = string
   description = "Version of kube-prometheus-stack Helm chart"
-  default     = "51.7.1"
+  default     = "79.5.0"
 }
 
 # Ресурсы и масштабирование
@@ -73,13 +73,18 @@ variable "network_policy_enabled" {
 }
 
 # Дополнительные настройки Helm
-variable "values" { # <-- ДОБАВЬТЕ ЭТУ ПЕРЕМЕННУЮ
-  description = "Additional structured values for the Helm chart"
-  type        = any # Используем any, так как это сложный объект
+variable "extra_values" {
+  type        = map(any)
+  description = "Extra values to pass to Helm chart"
   default     = {}
 }
 
-
+# Node selector и tolerations
+variable "node_selector" {
+  type        = map(string)
+  description = "Node selector for monitoring components"
+  default     = {}
+}
 
 variable "tolerations" {
   type = list(object({
@@ -125,55 +130,11 @@ variable "resource_limits" {
   }
 }
 
+# Ingress settings
 variable "enable_ingress" {
   type        = bool
   description = "Enable Ingress resources for monitoring stack"
-  default     = true
-}
-
-variable "ingress_class_name" {
-  type        = string
-  description = "Ingress class name"
-  default     = "nginx"
-}
-
-variable "ingress_annotations" {
-  type        = map(string)
-  description = "Annotations for Ingress resources"
-  default     = {}
-}
-
-variable "enable_network_policies" {
-  type        = bool
-  description = "Enable network policies for monitoring components"
-  default     = true
-}
-
-
-# Дополните существующий variables.tf этими переменными:
-
-variable "extra_values" {
-  type        = map(any)
-  description = "Extra values to pass to Helm chart"
-  default     = {}
-}
-
-variable "node_selector" {
-  type        = map(string)
-  description = "Node selector for monitoring components"
-  default     = {}
-}
-
-variable "enable_alertmanager" {
-  type        = bool
-  description = "Enable Alertmanager"
-  default     = true
-}
-
-variable "enable_ingress" {
-  type        = bool
-  description = "Enable Ingress resources for monitoring stack"
-  default     = false  # По умолчанию отключим, т.к. у нас отдельный job в GitHub Actions
+  default     = false
 }
 
 variable "ingress_class_name" {
@@ -185,11 +146,5 @@ variable "ingress_class_name" {
 variable "enable_network_policies" {
   type        = bool
   description = "Enable network policies for monitoring components"
-  default     = true
-}
-
-variable "network_policy_enabled" {
-  type        = bool
-  description = "Enable network policies for Yandex Cloud"
   default     = true
 }
