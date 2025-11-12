@@ -152,35 +152,35 @@ resource "kubernetes_network_policy" "monitoring_isolate" {
 }
 
 # ServiceMonitor для самого Prometheus
-resource "kubernetes_manifest" "prometheus_self_monitor" {
-  provider = kubernetes
-  manifest = {
-    apiVersion = "monitoring.coreos.com/v1"
-    kind       = "ServiceMonitor"
-    metadata = {
-      name      = "prometheus-self-monitor"
-      namespace = kubernetes_namespace.monitoring.metadata[0].name
-      labels = {
-        release = helm_release.kube_prometheus_stack.name
-      }
-    }
-    spec = {
-      selector = {
-        matchLabels = {
-          operated-prometheus = "true"
-        }
-      }
-      endpoints = [{
-        port     = "web"
-        interval = "30s"
-        path     = "/metrics"
-      }]
-    }
-  }
-  depends_on = [
-    helm_release.kube_prometheus_stack,
-  ]
-}
+#resource "kubernetes_manifest" "prometheus_self_monitor" {
+#  provider = kubernetes
+#  manifest = {
+#    apiVersion = "monitoring.coreos.com/v1"
+#    kind       = "ServiceMonitor"
+#    metadata = {
+#      name      = "prometheus-self-monitor"
+#      namespace = kubernetes_namespace.monitoring.metadata[0].name
+#      labels = {
+#        release = helm_release.kube_prometheus_stack.name
+#      }
+#    }
+#    spec = {
+#      selector = {
+#        matchLabels = {
+#          operated-prometheus = "true"
+#        }
+#      }
+#      endpoints = [{
+#        port     = "web"
+#        interval = "30s"
+#        path     = "/metrics"
+#      }]
+#    }
+#  }
+#  depends_on = [
+#    helm_release.kube_prometheus_stack,
+#  ]
+#}
 
 # Ingress для Grafana
 resource "kubernetes_ingress_v1" "grafana" {
