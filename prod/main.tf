@@ -14,7 +14,6 @@ module "kube_prometheus" {
   
   # Yandex Cloud специфичные настройки
   storage_class_name = var.storage_class_name
-  load_balancer_annotations = var.load_balancer_annotations
   
   # Секреты
   grafana_admin_password = var.grafana_admin_password
@@ -24,12 +23,5 @@ module "kube_prometheus" {
   enable_thanos       = var.enable_thanos
   
   # Дополнительные values для Helm
-  values = {
-    "grafana.service.type"                    = "LoadBalancer"
-    "grafana.service.annotations"             = var.load_balancer_annotations
-    "prometheus.service.type"                 = "LoadBalancer"
-    "prometheus.service.annotations"          = var.load_balancer_annotations
-    "alertmanager.service.type"               = "LoadBalancer"
-    "alertmanager.service.annotations"        = var.load_balancer_annotations
-  }
+  extra_values = var.extra_values
 }
