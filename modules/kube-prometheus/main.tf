@@ -67,17 +67,17 @@ resource "helm_release" "kube_prometheus_stack" {
   name       = "kube-prometheus-stack"
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"
-  version    = "79.5.0" 
+  version    = "58.2.0" 
   namespace  = kubernetes_namespace.monitoring.metadata[0].name
-  timeout    = 1801
-  wait       = true
-  wait_for_jobs = false # We dont wait full install.
+  timeout    = 600
+#  wait_for_jobs = false # We dont wait full install.
     
 
   disable_webhooks = true
   force_update    = true
   cleanup_on_fail = true
   replace         = true
+  wait       = false
 
   values = [
     templatefile("${path.module}/values.yaml.tpl", {
