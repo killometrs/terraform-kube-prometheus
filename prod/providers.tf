@@ -14,6 +14,10 @@ terraform {
       source  = "yandex-cloud/yandex"
       version = "~> 0.95"
     }
+    kubectl = {
+      source  = "gavinbunney/kubectl"
+      version = "~> 1.14"
+    }
   }
 
   backend "s3" {
@@ -35,4 +39,8 @@ provider "helm" {
   kubernetes {
     config_path = var.kube_config_path
   }
+}
+
+provider "kubectl" {
+  config_path = var.kube_config_path
 }

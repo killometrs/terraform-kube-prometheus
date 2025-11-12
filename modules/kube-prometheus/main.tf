@@ -10,12 +10,6 @@ resource "kubernetes_namespace" "monitoring" {
   }
 }
 
-# Добавление Helm репозитория
-resource "helm_repository" "prometheus_community" {
-  name = "prometheus-community"
-  url  = "https://prometheus-community.github.io/helm-charts"
-}
-
 # Создание секрета для Grafana
 resource "kubernetes_secret" "grafana_admin" {
   metadata {
@@ -34,7 +28,7 @@ resource "kubernetes_secret" "grafana_admin" {
 # Установка kube-prometheus stack
 resource "helm_release" "kube_prometheus_stack" {
   name       = "kube-prometheus-stack"
-  repository = helm_repository.prometheus_community.metadata[0].name
+  repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"
   version    = var.prometheus_stack_version
   namespace  = kubernetes_namespace.monitoring.metadata[0].name
@@ -156,6 +150,8 @@ resource "kubernetes_manifest" "prometheus_self_monitor" {
 
 # Ingress для Grafana
 resource "kubernetes_ingress_v1" "grafana" {
+  count = var.enable_ingress ? 1 : 0
+
   metadata {
     name      = "grafana"
     namespace = kubernetes_namespace.monitoring.metadata[0].name
@@ -166,8 +162,8 @@ resource "kubernetes_ingress_v1" "grafana" {
   }
 
   spec {
-    ingress_class_name = "nginx"
-
+    ingress_class_name = var.ingress_class_name
+    
     rule {
       http {
         path {
@@ -176,7 +172,7 @@ resource "kubernetes_ingress_v1" "grafana" {
             service {
               name = "${helm_release.kube_prometheus_stack.name}-grafana"
               port {
-                number = 80
+                number = 3000
               }
             }
           }
@@ -190,6 +186,8 @@ resource "kubernetes_ingress_v1" "grafana" {
 
 # Network Policy для Grafana
 resource "kubernetes_network_policy" "grafana" {
+  count = var.enable_network_policies ? 1 : 0
+
   metadata {
     name      = "grafana"
     namespace = kubernetes_namespace.monitoring.metadata[0].name
@@ -209,7 +207,7 @@ resource "kubernetes_network_policy" "grafana" {
         port     = "3000"
         protocol = "TCP"
       }
-      from = []  # Разрешить доступ отовсюду
+      from = []
     }
   }
 
