@@ -69,9 +69,11 @@ resource "helm_release" "kube_prometheus_stack" {
   chart      = "kube-prometheus-stack"
   version    = "79.5.0" 
   namespace  = kubernetes_namespace.monitoring.metadata[0].name
-  timeout    = 600
+  timeout    = 1800
   wait       = true
- 
+  wait_for_jobs = false # We dont wait full install.
+    
+
   disable_webhooks = true
   force_update    = true
   cleanup_on_fail = true
