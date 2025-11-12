@@ -33,6 +33,11 @@ resource "kubernetes_namespace" "monitoring" {
   }
 }
 
+resource "kubectl_manifest" "prometheus_self_monitor_crd" {
+  # Применяем CRD из локального файла перед установкой Helm-чарта
+  yaml_body = file("${path.module}/crd-servicemonitors.yaml")
+}
+
 # Создание секрета для Grafana
 resource "kubernetes_secret" "grafana_admin" {
   metadata {
@@ -66,8 +71,8 @@ resource "helm_release" "kube_prometheus_stack" {
       storage_class_name     = var.storage_class_name
       enable_thanos          = var.enable_thanos
       resource_limits        = var.resource_limits
-    })
-    ,yamlencode(var.values)
+    }),
+    yamlencode(var.values)
   ]
   
 
@@ -83,7 +88,8 @@ resource "helm_release" "kube_prometheus_stack" {
 
   depends_on = [
     kubernetes_namespace.monitoring,
-    kubernetes_secret.grafana_admin
+    kubernetes_secret.grafana_admin,
+    kubectl_manifest.prometheus_self_monitor_crd
   ]
 
   lifecycle {
@@ -131,7 +137,6 @@ resource "kubernetes_network_policy" "monitoring_isolate" {
 # ServiceMonitor для самого Prometheus
 resource "kubernetes_manifest" "prometheus_self_monitor" {
   provider = kubernetes
-  depends_on = [helm_release.kube_prometheus_stack]
   manifest = {
     apiVersion = "monitoring.coreos.com/v1"
     kind       = "ServiceMonitor"
