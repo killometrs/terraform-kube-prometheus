@@ -148,3 +148,48 @@ variable "enable_network_policies" {
   description = "Enable network policies for monitoring components"
   default     = true
 }
+
+
+# Дополните существующий variables.tf этими переменными:
+
+variable "extra_values" {
+  type        = map(any)
+  description = "Extra values to pass to Helm chart"
+  default     = {}
+}
+
+variable "node_selector" {
+  type        = map(string)
+  description = "Node selector for monitoring components"
+  default     = {}
+}
+
+variable "enable_alertmanager" {
+  type        = bool
+  description = "Enable Alertmanager"
+  default     = true
+}
+
+variable "enable_ingress" {
+  type        = bool
+  description = "Enable Ingress resources for monitoring stack"
+  default     = false  # По умолчанию отключим, т.к. у нас отдельный job в GitHub Actions
+}
+
+variable "ingress_class_name" {
+  type        = string
+  description = "Ingress class name"
+  default     = "nginx"
+}
+
+variable "enable_network_policies" {
+  type        = bool
+  description = "Enable network policies for monitoring components"
+  default     = true
+}
+
+variable "network_policy_enabled" {
+  type        = bool
+  description = "Enable network policies for Yandex Cloud"
+  default     = true
+}
