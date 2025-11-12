@@ -178,7 +178,6 @@ resource "kubernetes_network_policy" "grafana" {
         port     = "3000"
         protocol = "TCP"
       }
-      from = []
     }
   }
 
