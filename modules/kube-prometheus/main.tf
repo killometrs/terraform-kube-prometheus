@@ -1,30 +1,3 @@
-terraform {
-  # Добавьте этот блок в начало файла modules/kube-prometheus/main.tf
-  required_providers {
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.23"
-    }
-    helm = {
-      source  = "hashicorp/helm"
-      version = "~> 2.11"
-    }
-    yandex = {
-      source  = "yandex-cloud/yandex"
-      version = "~> 0.95"
-    }
-    # Укажите, что модуль тоже использует gavinbunney/kubectl
-    kubectl = {
-      source  = "gavinbunney/kubectl"
-      version = "~> 1.14"
-    }
-    time = {
-      source  = "hashicorp/time"
-      version = "~> 0.9"
-    }
-  }
-}
-
 # Создание namespace для мониторинга
 resource "kubernetes_namespace" "monitoring" {
   metadata {
@@ -36,7 +9,6 @@ resource "kubernetes_namespace" "monitoring" {
     }
   }
 }
-
 
 # Создание секрета для Grafana
 resource "kubernetes_secret" "grafana_admin" {
@@ -51,71 +23,6 @@ resource "kubernetes_secret" "grafana_admin" {
   }
 
   depends_on = [kubernetes_namespace.monitoring]
-}
-
-
-# --- ДОБАВЛЕННЫЙ РЕСУРС: Установка ServiceMonitor CRD ---
-#resource "kubectl_manifest" "prometheus_self_monitor_crd" {
-#  yaml_body = file("${path.module}/crd-servicemonitors.yaml")
-#}
-
-resource "kubectl_manifest" "prometheus_self_monitor_crd" {
-  yaml_body = fileexists("${path.module}/crd/servicemonitors.yaml") ? file("${path.module}/crd/servicemonitors.yaml") : "apiVersion: apiextensions.k8s.io/v1\nkind: CustomResourceDefinition\nmetadata:\n  name: servicemonitors.monitoring.coreos.com\nspec:\n  group: monitoring.coreos.com\n  names:\n    kind: ServiceMonitor\n    plural: servicemonitors\n  scope: Namespaced\n  versions:\n  - name: v1\n    served: true\n    storage: true"
-}
-
-# --- ДОБАВЛЕННЫЙ РЕСУРС: Задержка для применения CRD ---
-resource "time_sleep" "wait_for_crd" {
-  depends_on = [kubectl_manifest.prometheus_self_monitor_crd]
-  # Ждем 5 секунд, этого обычно достаточно
-  create_duration = "5s" 
-}
-
-
-# Установка kube-prometheus stack
-resource "helm_release" "kube_prometheus_stack" {
-  
-
-  name       = "kube-prometheus-stack"
-  repository = "https://prometheus-community.github.io/helm-charts"
-  chart      = "kube-prometheus-stack"
-  version    = var.prometheus_stack_version
-  namespace  = kubernetes_namespace.monitoring.metadata[0].name
-  timeout    = 600
-  wait       = true
-  
-  values = [
-    templatefile("${path.module}/values.yaml.tpl", {
-      grafana_admin_password = var.grafana_admin_password
-      prometheus_replicas    = var.prometheus_replicas
-      prometheus_retention   = var.prometheus_retention
-      storage_class_name     = var.storage_class_name
-      enable_thanos          = var.enable_thanos
-      resource_limits        = var.resource_limits
-    }),
-    yamlencode(var.values)
-  ]
-  
-
-  set {
-    name  = "grafana.admin.existingSecret"
-    value = kubernetes_secret.grafana_admin.metadata[0].name
-  }
-
-  set {
-    name  = "alertmanager.enabled"
-    value = var.enable_alertmanager
-  }
-
-  depends_on = [
-    kubernetes_namespace.monitoring,
-    kubernetes_secret.grafana_admin,
-    kubectl_manifest.prometheus_self_monitor_crd,
-    time_sleep.wait_for_crd
-  ]
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 # Network Policy для изоляции
@@ -155,36 +62,62 @@ resource "kubernetes_network_policy" "monitoring_isolate" {
   depends_on = [kubernetes_namespace.monitoring]
 }
 
-# ServiceMonitor для самого Prometheus
-#resource "kubernetes_manifest" "prometheus_self_monitor" {
-#  provider = kubernetes
-#  manifest = {
-#    apiVersion = "monitoring.coreos.com/v1"
-#    kind       = "ServiceMonitor"
-#    metadata = {
-#      name      = "prometheus-self-monitor"
-#      namespace = kubernetes_namespace.monitoring.metadata[0].name
-#      labels = {
-#        release = helm_release.kube_prometheus_stack.name
-#      }
-#    }
-#    spec = {
-#      selector = {
-#        matchLabels = {
-#          operated-prometheus = "true"
-#        }
-#      }
-#      endpoints = [{
-#        port     = "web"
-#        interval = "30s"
-#        path     = "/metrics"
-#      }]
-#    }
-#  }
-#  depends_on = [
-#    helm_release.kube_prometheus_stack,
-#  ]
-#}
+# Установка kube-prometheus stack
+resource "helm_release" "kube_prometheus_stack" {
+  name       = "kube-prometheus-stack"
+  repository = "https://prometheus-community.github.io/helm-charts"
+  chart      = "kube-prometheus-stack"
+  version    = var.prometheus_stack_version
+  namespace  = kubernetes_namespace.monitoring.metadata[0].name
+  timeout    = 600
+  wait       = true
+  
+  values = [
+    templatefile("${path.module}/values.yaml.tpl", {
+      grafana_admin_password = var.grafana_admin_password
+      prometheus_replicas    = var.prometheus_replicas
+      prometheus_retention   = var.prometheus_retention
+      storage_class_name     = var.storage_class_name
+      enable_thanos          = var.enable_thanos
+      resource_limits        = var.resource_limits
+    })
+  ]
+  
+  dynamic "set" {
+    for_each = var.extra_values
+    content {
+      name  = set.key
+      value = set.value
+    }
+  }
+  
+  dynamic "set" {
+    for_each = var.node_selector
+    content {
+      name  = "nodeSelector.${set.key}"
+      value = set.value
+    }
+  }
+
+  set {
+    name  = "grafana.admin.existingSecret"
+    value = kubernetes_secret.grafana_admin.metadata[0].name
+  }
+
+  set {
+    name  = "alertmanager.enabled"
+    value = var.enable_alertmanager
+  }
+
+  depends_on = [
+    kubernetes_namespace.monitoring,
+    kubernetes_secret.grafana_admin
+  ]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
 
 # Ingress для Grafana
 resource "kubernetes_ingress_v1" "grafana" {
@@ -245,7 +178,7 @@ resource "kubernetes_network_policy" "grafana" {
         port     = "3000"
         protocol = "TCP"
       }
-#      from = []
+      from = []
     }
   }
 
