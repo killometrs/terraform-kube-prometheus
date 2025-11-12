@@ -44,6 +44,13 @@ jobs:
           grafana_admin_password = "${{ secrets.GRAFANA_ADMIN_PASSWORD }}"
           EOF
 
+      - name: Setup Kubernetes for Terraform
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_DATA }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+
       - name: Terraform Init
         run: |
           cd prod

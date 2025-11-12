@@ -1,11 +1,11 @@
 module "kube_prometheus" {
   source = "../modules/kube-prometheus"
 
-  providers = {
-    kubernetes = kubernetes
-    helm       = helm
-    kubectl    = kubectl
-  }
+#  providers = {
+#    kubernetes = kubernetes
+#    helm       = helm
+#    kubectl    = kubectl
+#  }
 
   # Основные параметры
   cluster_name     = var.cluster_name
