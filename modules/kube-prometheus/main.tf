@@ -72,7 +72,6 @@ resource "helm_release" "kube_prometheus_stack" {
   timeout    = 600
 #  wait_for_jobs = false # We dont wait full install.
     
-
   disable_webhooks = true
   force_update    = true
   cleanup_on_fail = true
