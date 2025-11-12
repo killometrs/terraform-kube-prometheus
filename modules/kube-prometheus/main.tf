@@ -107,6 +107,7 @@ resource "kubernetes_network_policy" "monitoring_isolate" {
 
 # ServiceMonitor для самого Prometheus
 resource "kubernetes_manifest" "prometheus_self_monitor" {
+  provider = kubernetes
   manifest = {
     apiVersion = "monitoring.coreos.com/v1"
     kind       = "ServiceMonitor"
