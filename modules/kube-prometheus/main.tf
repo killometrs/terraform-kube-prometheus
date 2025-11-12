@@ -69,7 +69,7 @@ resource "helm_release" "kube_prometheus_stack" {
   chart      = "kube-prometheus-stack"
   version    = "79.5.0" 
   namespace  = kubernetes_namespace.monitoring.metadata[0].name
-  timeout    = 1800
+  timeout    = 1200
   wait       = true
   wait_for_jobs = false # We dont wait full install.
     
