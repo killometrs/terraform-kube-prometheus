@@ -62,15 +62,28 @@ jobs:
           YC_TOKEN: ${{ secrets.YC_TOKEN }}
           TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
 
+      # --- BACKUP before changes ---
+      - name: Backup monitoring before changes
+        if: github.event_name == 'push'
+        run: |
+          chmod +x scripts/backup-monitoring.sh
+          GRAFANA_PASSWORD="${{ secrets.GRAFANA_ADMIN_PASSWORD }}" ./scripts/backup-monitoring.sh
+
+      - name: Upload backup artifacts
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: monitoring-backup
+          path: backup-*/
+          retention-days: 7
+
+      # --- CLEANUP before apply ---
       - name: Cleanup stuck Helm release
         if: github.event_name == 'push'
         run: |
           echo "=== Cleaning up stuck Helm release ==="
-          # Принудительно удаляем релиз в любом состоянии
           helm uninstall kube-prometheus-stack -n monitoring --ignore-not-found || true
-          # Ждем завершения удаления
           sleep 10
-          # Проверяем что релиза нет
           helm list -n monitoring
           echo "=== Cleanup complete ==="
 
@@ -81,6 +94,7 @@ jobs:
           kubectl delete networkpolicies grafana -n monitoring --ignore-not-found || true
           echo "=== Cleanup complete ==="
 
+      # --- APPLY changes ---
       - name: Terraform Apply
         if: github.event_name == 'push'
         run: |
@@ -91,7 +105,16 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_SECRET_KEY }}
           YC_TOKEN: ${{ secrets.YC_TOKEN }}
           TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
-          
+
+      # --- RESTORE after deploy ---
+      - name: Restore monitoring after deploy
+        if: github.event_name == 'push'
+        run: |
+          chmod +x scripts/restore-monitoring.sh
+          LATEST_BACKUP=$(ls -td backup-* | head -1)
+          GRAFANA_PASSWORD="${{ secrets.GRAFANA_ADMIN_PASSWORD }}" ./scripts/restore-monitoring.sh "$LATEST_BACKUP"
+
+      # --- VERIFY installation ---
       - name: Verify kube-prometheus-stack installation
         if: github.event_name == 'push'
         run: |
@@ -103,6 +126,7 @@ jobs:
           kubectl get svc -n monitoring
           echo "=== Persistent volumes ==="
           kubectl get pvc -n monitoring
+
   manifests:
     runs-on: ubuntu-latest
     needs: terraform
@@ -123,4 +147,3 @@ jobs:
 
       - name: Apply additional manifests
         run: ./scripts/apply-manifests.sh
-
