@@ -62,15 +62,6 @@ resource "kubernetes_network_policy" "monitoring_isolate" {
   depends_on = [kubernetes_namespace.monitoring]
 }
 
-resource "kubernetes_storage_class_v1" "grafana_storage" {
-  metadata {
-    name = "standard"
-  }
-  
-  storage_provisioner = "kubernetes.io/no-provisioner"
-  volume_binding_mode = "WaitForFirstConsumer"
-  reclaim_policy      = "Retain"
-}
 
 # Установка kube-prometheus stack
 resource "helm_release" "kube_prometheus_stack" {
