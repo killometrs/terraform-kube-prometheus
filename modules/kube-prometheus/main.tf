@@ -92,7 +92,7 @@ resource "helm_release" "kube_prometheus_stack" {
       grafana_admin_password = var.grafana_admin_password
       prometheus_replicas    = var.prometheus_replicas
       prometheus_retention   = var.prometheus_retention
-      storage_class          = var.storage_class_name  # ← ИЗМЕНИТЬ НА storage_class
+      storage_class_name     = var.storage_class_name  # ← ИЗМЕНИТЬ НА storage_class
       enable_thanos          = var.enable_thanos
       resource_limits        = var.resource_limits
     })
