@@ -1,3 +1,5 @@
+# modules/kube-prometheus/values.yaml.tpl
+
 grafana:
   admin:
     existingSecret: ""
@@ -6,7 +8,7 @@ grafana:
   adminPassword: ${grafana_admin_password}
   persistence:
     enabled: true
-    storageClassName: ${storage_class_name}
+    storageClassName: ${storage_class_name}  # ← здесь правильно
     size: 20Gi
   resources:
     limits:
@@ -23,7 +25,7 @@ prometheus:
     storageSpec:
       volumeClaimTemplate:
         spec:
-          storageClassName: ${storage_class_name}
+          storageClassName: ${storage_class_name}  # ← здесь правильно
           resources:
             requests:
               storage: 5Gi
@@ -40,7 +42,7 @@ alertmanager:
     storage:
       volumeClaimTemplate:
         spec:
-          storageClassName: ${storage_class}
+          storageClassName: ${storage_class_name}  # ← ИСПРАВИТЬ: было storage_class
           resources:
             requests:
               storage: 5Gi
