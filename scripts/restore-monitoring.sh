@@ -1,52 +1,118 @@
 #!/bin/bash
-set -e
 
-BACKUP_DIR=${1:-"backup-latest"}
+echo "=== Starting Monitoring Restore ==="
 
-if [ ! -d "$BACKUP_DIR" ]; then
-    echo "Backup directory $BACKUP_DIR not found!"
+# Настройки
+BACKUP_DIR="./backup"
+
+# Функция для поиска последнего бэкапа
+find_latest_backup() {
+    if [ -d "$BACKUP_DIR" ]; then
+        # Ищем последнюю директорию с бэкапом
+        local latest_backup=$(find "$BACKUP_DIR" -maxdepth 1 -type d -name "backup-*" | sort -r | head -1)
+        
+        if [ -n "$latest_backup" ]; then
+            echo "$latest_backup"
+            return 0
+        else
+            echo "No backup directories found in $BACKUP_DIR"
+            return 1
+        fi
+    else
+        echo "Backup directory $BACKUP_DIR does not exist"
+        return 1
+    fi
+}
+
+# Функция для безопасного применения ресурсов
+safe_apply() {
+    local file=$1
+    if [ -f "$file" ] && [ -s "$file" ]; then
+        echo "Applying $file..."
+        kubectl apply -f "$file" --server-side=true --force-conflicts 2>/dev/null || \
+        kubectl apply -f "$file" 2>/dev/null || echo "⚠️ Failed to apply $file"
+    fi
+}
+
+# Поиск последнего бэкапа
+echo "Looking for latest backup..."
+RESTORE_DIR=$(find_latest_backup)
+
+if [ -z "$RESTORE_DIR" ] || [ ! -d "$RESTORE_DIR" ]; then
+    echo "❌ No valid backup found for restore"
+    echo "Available backups:"
+    ls -la "$BACKUP_DIR" 2>/dev/null || echo "No backup directory"
     exit 1
 fi
 
-echo "=== Starting Monitoring Restore from $BACKUP_DIR ==="
+echo "Found backup: $RESTORE_DIR"
 
-# Восстановление Grafana дашбордов
-echo "Restoring Grafana dashboards..."
-kubectl port-forward svc/kube-prometheus-stack-grafana -n monitoring 3000:80 &
-GRAFANA_PID=$!
-sleep 5
+# Проверяем доступ к кластеру
+if ! kubectl cluster-info &> /dev/null; then
+    echo "❌ Cannot connect to Kubernetes cluster"
+    exit 1
+fi
 
-for dashboard_file in $BACKUP_DIR/grafana-dashboard-*.json; do
-    if [ -f "$dashboard_file" ]; then
-        curl -s -X POST -u "admin:$GRAFANA_PASSWORD" -H "Content-Type: application/json" \
-             http://localhost:3000/api/dashboards/db -d @"$dashboard_file"
-        echo "Restored dashboard: $dashboard_file"
+# Создаем namespace monitoring если не существует
+if ! kubectl get namespace monitoring &> /dev/null; then
+    echo "Creating monitoring namespace..."
+    kubectl create namespace monitoring
+fi
+
+# Восстанавливаем ресурсы в правильном порядке
+echo "Restoring monitoring resources..."
+
+# 1. Восстанавливаем базовые ресурсы
+if [ -f "$RESTORE_DIR/all-resources.yaml" ]; then
+    echo "Restoring all resources..."
+    safe_apply "$RESTORE_DIR/all-resources.yaml"
+fi
+
+# 2. Восстанавливаем отдельные ресурсы по типам
+for resource_file in "$RESTORE_DIR"/*.yaml; do
+    case $(basename "$resource_file") in
+        "all-resources.yaml")
+            # Уже применили
+            ;;
+        "grafana-deployment.yaml")
+            echo "Restoring Grafana deployment..."
+            safe_apply "$resource_file"
+            ;;
+        "configmaps.yaml")
+            echo "Restoring configmaps..."
+            safe_apply "$resource_file"
+            ;;
+        "pvc.yaml")
+            echo "Restoring PVCs..."
+            safe_apply "$resource_file"
+            ;;
+        "secrets.yaml")
+            echo "Restoring secrets..."
+            safe_apply "$resource_file"
+            ;;
+        "serviceaccounts.yaml")
+            echo "Restoring service accounts..."
+            safe_apply "$resource_file"
+            ;;
+        *)
+            echo "Applying $resource_file..."
+            safe_apply "$resource_file"
+            ;;
+    esac
+done
+
+# 3. Восстанавливаем CRD если есть
+for crd_file in "$RESTORE_DIR"/*monitors.yaml "$RESTORE_DIR"/prometheuses.yaml "$RESTORE_DIR"/alertmanagers.yaml; do
+    if [ -f "$crd_file" ]; then
+        echo "Restoring CRD: $(basename "$crd_file")"
+        safe_apply "$crd_file"
     fi
 done
 
-# Восстановление datasources
-if [ -f "$BACKUP_DIR/grafana-datasources.json" ]; then
-    cat "$BACKUP_DIR/grafana-datasources.json" | jq -c '.[]' | while read datasource; do
-        curl -s -X POST -u "admin:$GRAFANA_PASSWORD" -H "Content-Type: application/json" \
-             http://localhost:3000/api/datasources -d "$datasource"
-    done
-fi
+echo "✅ Restore completed from: $RESTORE_DIR"
 
-kill $GRAFANA_PID
+# Проверяем статус восстановления
+echo "=== Restore Status ==="
+kubectl get all -n monitoring 2>/dev/null || echo "No resources in monitoring namespace"
 
-# Восстановление Prometheus rules
-if [ -f "$BACKUP_DIR/prometheus-rules.yaml" ]; then
-    kubectl apply -f "$BACKUP_DIR/prometheus-rules.yaml"
-fi
-
-# Восстановление данных PVC (требует остановки пода)
-echo "Restoring PVC data..."
-for data_file in $BACKUP_DIR/prometheus-data-*.tar.gz; do
-    if [ -f "$data_file" ]; then
-        PVC_NAME=$(echo $data_file | sed 's/.*prometheus-data-//' | sed 's/.tar.gz//')
-        echo "Restoring Prometheus data to PVC: $PVC_NAME"
-        # Здесь нужна сложная логика восстановления данных
-    fi
-done
-
-echo "=== Restore completed ==="
+echo "=== Restore Process Finished ==="
