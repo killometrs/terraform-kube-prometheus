@@ -1,26 +1,33 @@
 #!/bin/bash
-
 set -e
 
+echo "=== Applying Manifests ==="
+
+# Применяем Ingress Nginx
 echo "Applying Ingress Nginx..."
 kubectl apply -k manifests/ingress-nginx/
 
 echo "Waiting for Ingress Nginx to be ready..."
-kubectl wait --namespace ingress-nginx \
-  --for=condition=ready pod \
-  --selector=app.kubernetes.io/component=controller \
-  --timeout=300s
 
-echo "Restarting Ingress Nginx deployment..."
-kubectl rollout restart deployment -n ingress-nginx ingress-nginx-controller
+# Ждем пока под ingress-nginx запустится (максимум 2 минуты)
+echo "Waiting for ingress-nginx pod..."
+timeout 120s bash -c 'until kubectl get pods -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx --field-selector=status.phase=Running --no-headers; do sleep 5; done'
 
-echo "Waiting for rollout to complete..."
-kubectl rollout status deployment -n ingress-nginx ingress-nginx-controller --timeout=300s
+# Проверяем что deployment готов
+echo "Checking deployment status..."
+kubectl wait --for=condition=available deployment/ingress-nginx-controller -n ingress-nginx --timeout=120s
 
-echo "Applying network policies..."
-kubectl apply -k manifests/network-policies/
+echo "✅ Ingress Nginx is ready"
 
-echo "Applying ingress resources..."
-kubectl apply -k manifests/ingress/
+# Применяем остальные манифесты если есть
+if [ -d "manifests/network-policies" ]; then
+    echo "Applying Network Policies..."
+    kubectl apply -k manifests/network-policies/
+fi
 
-echo "All manifests applied successfully!"
+if [ -d "manifests/ingress" ]; then
+    echo "Applying Ingress resources..."
+    kubectl apply -k manifests/ingress/
+fi
+
+echo "✅ All manifests applied successfully"
