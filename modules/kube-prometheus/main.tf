@@ -77,11 +77,10 @@ resource "helm_release" "kube_prometheus_stack" {
   name       = "kube-prometheus-stack"
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"
-  version    = "58.2.0" 
+  version    = "58.2.0"
   namespace  = kubernetes_namespace.monitoring.metadata[0].name
   timeout    = 600
-#  wait_for_jobs = false # We dont wait full install.
-    
+
   disable_webhooks = true
   force_update    = true
   cleanup_on_fail = true
@@ -93,12 +92,12 @@ resource "helm_release" "kube_prometheus_stack" {
       grafana_admin_password = var.grafana_admin_password
       prometheus_replicas    = var.prometheus_replicas
       prometheus_retention   = var.prometheus_retention
-      storage_class_name     = var.storage_class_name
+      storage_class          = var.storage_class_name  # ← ИЗМЕНИТЬ НА storage_class
       enable_thanos          = var.enable_thanos
       resource_limits        = var.resource_limits
     })
   ]
-  
+
   dynamic "set" {
     for_each = var.extra_values
     content {
@@ -106,7 +105,7 @@ resource "helm_release" "kube_prometheus_stack" {
       value = set.value
     }
   }
-  
+
   dynamic "set" {
     for_each = var.node_selector
     content {
@@ -134,7 +133,6 @@ resource "helm_release" "kube_prometheus_stack" {
     create_before_destroy = true
   }
 }
-
 # Ingress для Grafana
 resource "kubernetes_ingress_v1" "grafana" {
   count = var.enable_ingress ? 1 : 0
