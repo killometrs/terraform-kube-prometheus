@@ -5,7 +5,15 @@ namespace: ingress-nginx
 
 resources:
 - namespace.yaml
+- service.yaml
+- ingress.yaml
 
-patchesStrategicMerge:
-- deployment-patch.yaml
-- service-patch.yaml
+patches:
+- path: deployment-patch.yaml
+  target:
+    kind: Deployment
+    name: ingress-nginx-controller 
+- path: service-patch.yaml
+  target:
+    kind: Service
+    name: ingress-nginx-controller
