@@ -2,6 +2,34 @@
 set -e
 
 echo "=== Starting Monitoring Backup ==="
+
+# Проверяем что неймспейс monitoring существует
+if ! kubectl get namespace monitoring &> /dev/null; then
+    echo "Namespace 'monitoring' does not exist"
+    exit 1
+fi
+
+# Проверяем что Grafana запущена
+echo "Checking Grafana status..."
+if ! kubectl get deployment grafana -n monitoring &> /dev/null; then
+    echo "Grafana deployment not found"
+    exit 1
+fi
+
+GRAFANA_STATUS=$(kubectl get deployment grafana -n monitoring -o jsonpath='{.status.readyReplicas}')
+if [ "$GRAFANA_STATUS" != "1" ]; then
+    echo "Grafana is not ready. Current ready replicas: $GRAFANA_STATUS"
+    echo "Please ensure Grafana is running before backup"
+    
+    # Показываем детали проблемы
+    kubectl get pods -n monitoring -l app.kubernetes.io/name=grafana
+    kubectl describe deployment grafana -n monitoring
+    exit 1
+fi
+
+echo "Backing up Grafana..."
+
+echo "=== Starting Monitoring Backup ==="
 BACKUP_DIR="backup-$(date +%Y%m%d-%H%M%S)"
 mkdir -p $BACKUP_DIR
 
