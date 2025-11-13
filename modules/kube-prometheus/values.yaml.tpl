@@ -26,7 +26,7 @@ prometheus:
           storageClassName: ${storage_class_name}
           resources:
             requests:
-              storage: 100Gi
+              storage: 5Gi
     resources:
       limits:
         cpu: ${resource_limits.prometheus.cpu}
@@ -37,7 +37,14 @@ prometheus:
 
 alertmanager:
   alertmanagerSpec:
-    replicas: 3
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: ${storage_class}
+          resources:
+            requests:
+              storage: 5Gi
+    replicas: 2
     resources:
       limits:
         cpu: ${resource_limits.alertmanager.cpu}

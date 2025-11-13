@@ -148,3 +148,9 @@ variable "enable_network_policies" {
   description = "Enable network policies for monitoring components"
   default     = true
 }
+
+variable "storage_class_name" {
+  description = "Name of the storage class to use for persistence"
+  type        = string
+  default     = "standard"
+}

@@ -1,5 +1,20 @@
+
+# StorageClass для всего кластера
+resource "kubernetes_storage_class_v1" "cluster_storage" {
+  metadata {
+    name = "standard"
+  }
+  
+  storage_provisioner = "kubernetes.io/no-provisioner"
+  volume_binding_mode = "WaitForFirstConsumer"
+  reclaim_policy      = "Retain"
+}
+
+
 module "kube_prometheus" {
   source = "../modules/kube-prometheus"
+
+  storage_class_name = kubernetes_storage_class_v1.cluster_storage.metadata[0].name
 
   # Основные параметры
   cluster_name     = var.cluster_name
