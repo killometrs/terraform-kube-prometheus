@@ -27,7 +27,7 @@ module "kube_prometheus" {
   prometheus_retention = var.prometheus_retention
   
   # Yandex Cloud специфичные настройки
-  storage_class_name = kubernetes_storage_class_v1.cluster_storage.metadata[0].name
+  storage_class_name = "standard"
   
   # Секреты
   grafana_admin_password = var.grafana_admin_password
