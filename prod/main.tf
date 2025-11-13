@@ -14,7 +14,6 @@ resource "kubernetes_storage_class_v1" "cluster_storage" {
 module "kube_prometheus" {
   source = "../modules/kube-prometheus"
 
-  storage_class_name = kubernetes_storage_class_v1.cluster_storage.metadata[0].name
 
   # Основные параметры
   cluster_name     = var.cluster_name
@@ -28,7 +27,7 @@ module "kube_prometheus" {
   prometheus_retention = var.prometheus_retention
   
   # Yandex Cloud специфичные настройки
-  storage_class_name = var.storage_class_name
+  storage_class_name = kubernetes_storage_class_v1.cluster_storage.metadata[0].name
   
   # Секреты
   grafana_admin_password = var.grafana_admin_password
