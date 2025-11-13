@@ -53,11 +53,6 @@ variable "enable_thanos" {
   default     = false
 }
 
-variable "storage_class_name" {
-  type        = string
-  description = "Storage class name for persistent volumes"
-  default     = "yc-network-hdd"
-}
 
 # Yandex Cloud специфичные
 variable "load_balancer_annotations" {
